@@ -1,30 +1,43 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>RTO & OOO Dashboard</title>
+  <title>RTO & WFH & OOO Dashboard</title>
   <style>
     body { font-family: Arial, sans-serif; margin: 40px; }
     input, button, select, textarea { margin: 10px 0; }
     .section { border-top: 1px solid #ccc; margin-top: 40px; padding-top: 20px; }
     textarea { width: 300px; height: 60px; resize: vertical; }
+    .days-group { display: inline-block; margin-right: 40px; vertical-align: top; }
+    label { display: block; }
   </style>
 </head>
 <body>
-  <h2>🧑‍💼 Return to Office - Weekly Poll</h2>
+  <h2>🧑‍💼 Weekly Work Plan Submission</h2>
   <label>
-    Name: <input type="text" id="name" oninput="prefillDays()" />
+    Name: <input type="text" id="name" oninput="prefillSelections()" />
   </label><br/>
-  <p>Select the days you'll be in the office (or none):</p>
-  <div id="days">
-    <label><input type="checkbox" name="day" value="Monday"> Monday</label><br/>
-    <label><input type="checkbox" name="day" value="Tuesday"> Tuesday</label><br/>
-    <label><input type="checkbox" name="day" value="Wednesday"> Wednesday</label><br/>
-    <label><input type="checkbox" name="day" value="Thursday"> Thursday</label><br/>
-    <label><input type="checkbox" name="day" value="Friday"> Friday</label><br/>
-  </div>
-  <button onclick="submitChoice()">Submit</button>
 
-  <h3>📊 Office Attendance Dashboard</h3>
+  <div class="days-group">
+    <p><b>Return to Office Days:</b></p>
+    <label><input type="checkbox" name="office-day" value="Monday"> Monday</label>
+    <label><input type="checkbox" name="office-day" value="Tuesday"> Tuesday</label>
+    <label><input type="checkbox" name="office-day" value="Wednesday"> Wednesday</label>
+    <label><input type="checkbox" name="office-day" value="Thursday"> Thursday</label>
+    <label><input type="checkbox" name="office-day" value="Friday"> Friday</label>
+  </div>
+
+  <div class="days-group">
+    <p><b>Work From Home Days:</b></p>
+    <label><input type="checkbox" name="wfh-day" value="Monday"> Monday</label>
+    <label><input type="checkbox" name="wfh-day" value="Tuesday"> Tuesday</label>
+    <label><input type="checkbox" name="wfh-day" value="Wednesday"> Wednesday</label>
+    <label><input type="checkbox" name="wfh-day" value="Thursday"> Thursday</label>
+    <label><input type="checkbox" name="wfh-day" value="Friday"> Friday</label>
+  </div>
+
+  <button onclick="submitWorkPlan()">Submit</button>
+
+  <h3>📊 Weekly Work Plan Dashboard</h3>
   <div id="dashboard"></div>
 
   <!-- OOO SECTION -->
@@ -60,53 +73,72 @@
   </div>
 
   <script>
-    // RTO logic
-    let rtoData = JSON.parse(localStorage.getItem('rtoData') || '{}');
+    // Work plan data: store office and wfh days by user
+    let workPlanData = JSON.parse(localStorage.getItem('workPlanData') || '{}');
 
-    function submitChoice() {
+    function submitWorkPlan() {
       const name = document.getElementById('name').value.trim();
-      const checkboxes = document.querySelectorAll('input[name="day"]:checked');
-      const days = Array.from(checkboxes).map(cb => cb.value);
-
       if (!name) {
         alert("Please enter your name.");
         return;
       }
+      // Get checked office days
+      const officeDays = Array.from(document.querySelectorAll('input[name="office-day"]:checked')).map(cb => cb.value);
+      // Get checked WFH days
+      const wfhDays = Array.from(document.querySelectorAll('input[name="wfh-day"]:checked')).map(cb => cb.value);
 
-      rtoData[name] = days; // can be empty if none selected
-      localStorage.setItem('rtoData', JSON.stringify(rtoData));
+      workPlanData[name] = { officeDays, wfhDays };
+      localStorage.setItem('workPlanData', JSON.stringify(workPlanData));
       renderDashboard();
-      alert("Your selection has been saved.");
+      alert("Your work plan has been saved.");
     }
 
     function renderDashboard() {
-      const summary = { Monday: [], Tuesday: [], Wednesday: [], Thursday: [], Friday: [] };
-      let noDays = [];
+      const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 
-      for (const [name, days] of Object.entries(rtoData)) {
-        if (days.length === 0) {
-          noDays.push(name);
-        } else {
-          days.forEach(day => {
-            if (summary[day]) summary[day].push(name);
-          });
-        }
+      // Prepare summary objects: day => [names]
+      let officeSummary = {};
+      let wfhSummary = {};
+      daysOfWeek.forEach(day => {
+        officeSummary[day] = [];
+        wfhSummary[day] = [];
+      });
+
+      for (const [name, plans] of Object.entries(workPlanData)) {
+        plans.officeDays.forEach(day => {
+          if (officeSummary[day]) officeSummary[day].push(name);
+        });
+        plans.wfhDays.forEach(day => {
+          if (wfhSummary[day]) wfhSummary[day].push(name);
+        });
       }
 
-      let html = '';
-      for (const [day, names] of Object.entries(summary)) {
-        html += `<b>${day}:</b> ${names.join(', ') || '-'} (${names.length})<br/>`;
-      }
+      let html = '<table border="1" cellpadding="8" cellspacing="0"><thead><tr><th>Day</th><th>In Office</th><th>Work From Home</th></tr></thead><tbody>';
 
-      html += `<br/><b>Working remotely (no office days):</b> ${noDays.join(', ') || '-'} (${noDays.length})`;
+      daysOfWeek.forEach(day => {
+        html += `<tr>
+          <td><b>${day}</b></td>
+          <td>${officeSummary[day].join(', ') || '-'}</td>
+          <td>${wfhSummary[day].join(', ') || '-'}</td>
+        </tr>`;
+      });
+
+      html += '</tbody></table>';
       document.getElementById('dashboard').innerHTML = html;
     }
 
-    function prefillDays() {
+    function prefillSelections() {
       const name = document.getElementById('name').value.trim();
-      const days = rtoData[name] || [];
-      document.querySelectorAll('input[name="day"]').forEach(cb => {
-        cb.checked = days.includes(cb.value);
+      const plan = workPlanData[name] || { officeDays: [], wfhDays: [] };
+
+      // Prefill office days
+      document.querySelectorAll('input[name="office-day"]').forEach(cb => {
+        cb.checked = plan.officeDays.includes(cb.value);
+      });
+
+      // Prefill WFH days
+      document.querySelectorAll('input[name="wfh-day"]').forEach(cb => {
+        cb.checked = plan.wfhDays.includes(cb.value);
       });
     }
 
