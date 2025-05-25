@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>RTO & WFH & OOO Dashboard</title>
+  <title>RTO & WFH & OOO Dashboard with Weekly Reset</title>
   <style>
     body { font-family: Arial, sans-serif; margin: 40px; }
     input, button, select, textarea { margin: 10px 0; }
@@ -9,6 +9,8 @@
     textarea { width: 300px; height: 60px; resize: vertical; }
     .days-group { display: inline-block; margin-right: 40px; vertical-align: top; }
     label { display: block; }
+    table { border-collapse: collapse; }
+    table, th, td { border: 1px solid black; padding: 8px; }
   </style>
 </head>
 <body>
@@ -73,8 +75,35 @@
   </div>
 
   <script>
+    // Utility to get the Date object for the most recent Friday 23:59
+    function getLastFriday2359() {
+      const now = new Date();
+      const day = now.getDay(); // Sunday=0, Monday=1,... Friday=5
+      let diff = day >= 5 ? day - 5 : 7 - (5 - day);
+      let lastFriday = new Date(now);
+      lastFriday.setDate(now.getDate() - diff);
+      lastFriday.setHours(23,59,59,999);
+      return lastFriday;
+    }
+
     // Work plan data: store office and wfh days by user
     let workPlanData = JSON.parse(localStorage.getItem('workPlanData') || '{}');
+
+    // Check and reset workPlanData weekly after Friday 23:59
+    function checkWeeklyReset() {
+      const lastResetStr = localStorage.getItem('workPlanLastReset');
+      const lastFriday2359 = getLastFriday2359();
+      const lastReset = lastResetStr ? new Date(lastResetStr) : null;
+
+      if (!lastReset || lastReset < lastFriday2359) {
+        // Reset work plan data
+        workPlanData = {};
+        localStorage.setItem('workPlanData', JSON.stringify(workPlanData));
+        localStorage.setItem('workPlanLastReset', new Date().toISOString());
+      }
+    }
+
+    checkWeeklyReset();
 
     function submitWorkPlan() {
       const name = document.getElementById('name').value.trim();
@@ -113,7 +142,7 @@
         });
       }
 
-      let html = '<table border="1" cellpadding="8" cellspacing="0"><thead><tr><th>Day</th><th>In Office</th><th>Work From Home</th></tr></thead><tbody>';
+      let html = '<table><thead><tr><th>Day</th><th>In Office</th><th>Work From Home</th></tr></thead><tbody>';
 
       daysOfWeek.forEach(day => {
         html += `<tr>
@@ -146,6 +175,19 @@
 
     // OOO logic
     let oooData = JSON.parse(localStorage.getItem('oooData') || '{}');
+
+    // Clean up OOO data removing dates before today
+    function cleanOldOOOEntries() {
+      const todayStr = new Date().toISOString().slice(0,10);
+      for (const date in oooData) {
+        if (date < todayStr) {
+          delete oooData[date];
+        }
+      }
+      localStorage.setItem('oooData', JSON.stringify(oooData));
+    }
+
+    cleanOldOOOEntries();
 
     function toggleRemark() {
       const type = document.getElementById('ooo-type').value;
