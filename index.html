@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>RTO & WFH & OOO Dashboard with Weekly Reset</title>
+  <title>RTO & WFH & OOO Dashboard with Weekly Reset & OOO Edit</title>
   <style>
     body { font-family: Arial, sans-serif; margin: 40px; }
     input, button, select, textarea { margin: 10px 0; }
@@ -11,6 +11,9 @@
     label { display: block; }
     table { border-collapse: collapse; }
     table, th, td { border: 1px solid black; padding: 8px; }
+    button.edit-btn, button.delete-btn {
+      margin-left: 5px; font-size: 0.8em; cursor: pointer;
+    }
   </style>
 </head>
 <body>
@@ -72,6 +75,9 @@
 
     <h3>📅 OOO Calendar</h3>
     <div id="ooo-dashboard"></div>
+
+    <h3>✏️ Edit/Delete OOO Entries</h3>
+    <div id="ooo-edit-list"></div>
   </div>
 
   <script>
@@ -196,6 +202,9 @@
 
     toggleRemark(); // initialize on load
 
+    // Current editing record info for OOO (null if no edit)
+    let currentEdit = null;
+
     function submitOOO() {
       const name = document.getElementById('ooo-name').value.trim();
       const startDate = document.getElementById('ooo-start-date').value;
@@ -213,6 +222,11 @@
         return;
       }
 
+      // If editing, first remove old entries for this person & old date range
+      if (currentEdit) {
+        removeOOOEntries(currentEdit.name, currentEdit.startDate, currentEdit.endDate);
+      }
+
       // Store leave for each date in the range
       const start = new Date(startDate);
       const end = new Date(endDate);
@@ -224,7 +238,7 @@
           oooData[dateStr] = [];
         }
 
-        // Remove existing entry for same person on this date
+        // Remove existing entry for same person on this date (avoid duplicates)
         oooData[dateStr] = oooData[dateStr].filter(entry => entry.name !== name);
 
         oooData[dateStr].push({ name, type, remark: type === 'Local' ? remark : '' });
@@ -232,7 +246,24 @@
 
       localStorage.setItem('oooData', JSON.stringify(oooData));
       renderOOO();
-      alert("Your OOO leave has been saved.");
+      clearOOOForm();
+      alert(currentEdit ? "Your OOO leave has been updated." : "Your OOO leave has been saved.");
+      currentEdit = null;
+    }
+
+    function removeOOOEntries(name, startDate, endDate) {
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+        const dateStr = d.toISOString().slice(0,10);
+        if (oooData[dateStr]) {
+          oooData[dateStr] = oooData[dateStr].filter(entry => entry.name !== name);
+          if (oooData[dateStr].length === 0) {
+            delete oooData[dateStr];
+          }
+        }
+      }
+      localStorage.setItem('oooData', JSON.stringify(oooData));
     }
 
     function renderOOO() {
@@ -250,9 +281,121 @@
       }
 
       document.getElementById('ooo-dashboard').innerHTML = html;
+      renderOOOEditList();
+    }
+
+    function renderOOOEditList() {
+      // We want to show unique person + date ranges in future/current only
+      const todayStr = new Date().toISOString().slice(0,10);
+
+      // Build a map of entries by person & aggregate continuous date ranges
+      let personDates = {};
+
+      // Sort dates ascending
+      const sortedDates = Object.keys(oooData).sort();
+
+      for (const date of sortedDates) {
+        if (date < todayStr) continue; // skip past
+        for (const entry of oooData[date]) {
+          const key = entry.name + '|' + entry.type + '|' + (entry.remark || '');
+          if (!personDates[key]) personDates[key] = [];
+          personDates[key].push(date);
+        }
+      }
+
+      // Convert each person's dates into continuous ranges
+      let ranges = [];
+      for (const key in personDates) {
+        const dates = personDates[key].sort();
+        // Split continuous dates into ranges
+        let start = dates[0];
+        let end = dates[0];
+        for (let i = 1; i < dates.length; i++) {
+          let prevDate = new Date(dates[i-1]);
+          let currDate = new Date(dates[i]);
+          prevDate.setDate(prevDate.getDate() + 1);
+          if (currDate.getTime() === prevDate.getTime()) {
+            // continuous
+            end = dates[i];
+          } else {
+            // gap, save previous range
+            const [name, type, remark] = key.split('|');
+            ranges.push({ name, type, remark, start, end });
+            start = dates[i];
+            end = dates[i];
+          }
+        }
+        // push last range
+        const [name, type, remark] = key.split('|');
+        ranges.push({ name, type, remark, start, end });
+      }
+
+      if (ranges.length === 0) {
+        document.getElementById('ooo-edit-list').innerHTML = '<i>No upcoming OOO entries.</i>';
+        return;
+      }
+
+      // Build HTML with edit/delete buttons
+      let html = '<table><thead><tr><th>Name</th><th>Type</th><th>Remark</th><th>Start Date</th><th>End Date</th><th>Actions</th></tr></thead><tbody>';
+      ranges.forEach((r, i) => {
+        html += `<tr>
+          <td>${r.name}</td>
+          <td>${r.type}</td>
+          <td>${r.remark || '-'}</td>
+          <td>${r.start}</td>
+          <td>${r.end}</td>
+          <td>
+            <button class="edit-btn" onclick="editOOOEntry(${i})">Edit</button>
+            <button class="delete-btn" onclick="deleteOOOEntry(${i})">Delete</button>
+          </td>
+        </tr>`;
+      });
+      html += '</tbody></table>';
+      document.getElementById('ooo-edit-list').innerHTML = html;
+
+      // Save ranges globally to access for edit/delete
+      window.oooRanges = ranges;
+    }
+
+    function editOOOEntry(index) {
+      const entry = window.oooRanges[index];
+      if (!entry) return;
+
+      currentEdit = entry;
+
+      // Fill form
+      document.getElementById('ooo-name').value = entry.name;
+      document.getElementById('ooo-start-date').value = entry.start;
+      document.getElementById('ooo-end-date').value = entry.end;
+      document.getElementById('ooo-type').value = entry.type;
+      toggleRemark();
+      document.getElementById('ooo-remark').value = entry.remark || '';
+
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function deleteOOOEntry(index) {
+      const entry = window.oooRanges[index];
+      if (!entry) return;
+
+      if (!confirm(`Delete OOO entry for ${entry.name} from ${entry.start} to ${entry.end}?`)) return;
+
+      removeOOOEntries(entry.name, entry.start, entry.end);
+      renderOOO();
+    }
+
+    function clearOOOForm() {
+      document.getElementById('ooo-name').value = '';
+      document.getElementById('ooo-start-date').value = '';
+      document.getElementById('ooo-end-date').value = '';
+      document.getElementById('ooo-type').value = 'Local';
+      toggleRemark();
+      document.getElementById('ooo-remark').value = '';
+      currentEdit = null;
     }
 
     renderOOO();
+
   </script>
 </body>
 </html>
