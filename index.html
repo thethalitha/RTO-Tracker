@@ -4,8 +4,9 @@
   <title>RTO & OOO Dashboard</title>
   <style>
     body { font-family: Arial, sans-serif; margin: 40px; }
-    input, button, select { margin: 10px; }
+    input, button, select, textarea { margin: 10px 0; }
     .section { border-top: 1px solid #ccc; margin-top: 40px; padding-top: 20px; }
+    textarea { width: 300px; height: 60px; resize: vertical; }
   </style>
 </head>
 <body>
@@ -33,15 +34,25 @@
       Name: <input type="text" id="ooo-name" />
     </label><br/>
     <label>
-      Date: <input type="date" id="ooo-date" />
+      Start Date: <input type="date" id="ooo-start-date" />
+    </label><br/>
+    <label>
+      End Date: <input type="date" id="ooo-end-date" />
     </label><br/>
     <label>
       Type:
-      <select id="ooo-type">
+      <select id="ooo-type" onchange="toggleRemark()">
         <option value="Local">Local Leave</option>
         <option value="Overseas">Overseas Leave</option>
       </select>
     </label><br/>
+    <div id="remark-container" style="display:none;">
+      <label>
+        Remark (for Local Leave):
+        <br/>
+        <textarea id="ooo-remark" placeholder="Short details here..."></textarea>
+      </label>
+    </div>
     <button onclick="submitOOO()">Submit OOO</button>
 
     <h3>📅 OOO Calendar</h3>
@@ -62,7 +73,7 @@
         return;
       }
 
-      rtoData[name] = days; // can be empty
+      rtoData[name] = days; // can be empty if none selected
       localStorage.setItem('rtoData', JSON.stringify(rtoData));
       renderDashboard();
       alert("Your selection has been saved.");
@@ -104,27 +115,50 @@
     // OOO logic
     let oooData = JSON.parse(localStorage.getItem('oooData') || '{}');
 
+    function toggleRemark() {
+      const type = document.getElementById('ooo-type').value;
+      document.getElementById('remark-container').style.display = (type === 'Local') ? 'block' : 'none';
+    }
+
+    toggleRemark(); // initialize on load
+
     function submitOOO() {
       const name = document.getElementById('ooo-name').value.trim();
-      const date = document.getElementById('ooo-date').value;
+      const startDate = document.getElementById('ooo-start-date').value;
+      const endDate = document.getElementById('ooo-end-date').value;
       const type = document.getElementById('ooo-type').value;
+      const remark = document.getElementById('ooo-remark').value.trim();
 
-      if (!name || !date) {
-        alert("Please enter both your name and date.");
+      if (!name || !startDate || !endDate) {
+        alert("Please enter name, start date, and end date.");
         return;
       }
 
-      if (!oooData[date]) {
-        oooData[date] = [];
+      if (endDate < startDate) {
+        alert("End date cannot be before start date.");
+        return;
       }
 
-      // Remove existing entry for same person & date (if any)
-      oooData[date] = oooData[date].filter(entry => entry.name !== name);
+      // Store leave for each date in the range
+      const start = new Date(startDate);
+      const end = new Date(endDate);
 
-      oooData[date].push({ name, type });
+      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+        const dateStr = d.toISOString().slice(0,10); // YYYY-MM-DD
+
+        if (!oooData[dateStr]) {
+          oooData[dateStr] = [];
+        }
+
+        // Remove existing entry for same person on this date
+        oooData[dateStr] = oooData[dateStr].filter(entry => entry.name !== name);
+
+        oooData[dateStr].push({ name, type, remark: type === 'Local' ? remark : '' });
+      }
+
       localStorage.setItem('oooData', JSON.stringify(oooData));
       renderOOO();
-      alert("Your OOO day has been saved.");
+      alert("Your OOO leave has been saved.");
     }
 
     function renderOOO() {
@@ -134,7 +168,10 @@
       for (const date of sortedDates) {
         const entries = oooData[date];
         html += `<b>${date}:</b> `;
-        html += entries.map(e => `${e.name} (${e.type})`).join(', ');
+        html += entries.map(e => {
+          const rmk = e.type === 'Local' && e.remark ? ` - ${e.remark}` : '';
+          return `${e.name} (${e.type}${rmk})`;
+        }).join(', ');
         html += `<br/>`;
       }
 
