@@ -1,19 +1,19 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Weekly Return to Office</title>
+  <title>RTO & OOO Dashboard</title>
   <style>
     body { font-family: Arial, sans-serif; margin: 40px; }
-    input, button { margin: 10px; }
+    input, button, select { margin: 10px; }
+    .section { border-top: 1px solid #ccc; margin-top: 40px; padding-top: 20px; }
   </style>
 </head>
 <body>
-  <h2>Return to Office - Weekly Poll</h2>
+  <h2>🧑‍💼 Return to Office - Weekly Poll</h2>
   <label>
     Name: <input type="text" id="name" oninput="prefillDays()" />
   </label><br/>
-
-  <p>Select the days you'll be in the office:</p>
+  <p>Select the days you'll be in the office (or none):</p>
   <div id="days">
     <label><input type="checkbox" name="day" value="Monday"> Monday</label><br/>
     <label><input type="checkbox" name="day" value="Tuesday"> Tuesday</label><br/>
@@ -23,10 +23,33 @@
   </div>
   <button onclick="submitChoice()">Submit</button>
 
-  <h3>📊 Dashboard</h3>
+  <h3>📊 Office Attendance Dashboard</h3>
   <div id="dashboard"></div>
 
+  <!-- OOO SECTION -->
+  <div class="section">
+    <h2>🌴 Out of Office (OOO) Submission</h2>
+    <label>
+      Name: <input type="text" id="ooo-name" />
+    </label><br/>
+    <label>
+      Date: <input type="date" id="ooo-date" />
+    </label><br/>
+    <label>
+      Type:
+      <select id="ooo-type">
+        <option value="Local">Local Leave</option>
+        <option value="Overseas">Overseas Leave</option>
+      </select>
+    </label><br/>
+    <button onclick="submitOOO()">Submit OOO</button>
+
+    <h3>📅 OOO Calendar</h3>
+    <div id="ooo-dashboard"></div>
+  </div>
+
   <script>
+    // RTO logic
     let rtoData = JSON.parse(localStorage.getItem('rtoData') || '{}');
 
     function submitChoice() {
@@ -34,12 +57,12 @@
       const checkboxes = document.querySelectorAll('input[name="day"]:checked');
       const days = Array.from(checkboxes).map(cb => cb.value);
 
-      if (!name || days.length === 0) {
-        alert("Please enter your name and select at least one day.");
+      if (!name) {
+        alert("Please enter your name.");
         return;
       }
 
-      rtoData[name] = days;
+      rtoData[name] = days; // can be empty
       localStorage.setItem('rtoData', JSON.stringify(rtoData));
       renderDashboard();
       alert("Your selection has been saved.");
@@ -47,11 +70,16 @@
 
     function renderDashboard() {
       const summary = { Monday: [], Tuesday: [], Wednesday: [], Thursday: [], Friday: [] };
+      let noDays = [];
 
       for (const [name, days] of Object.entries(rtoData)) {
-        days.forEach(day => {
-          if (summary[day]) summary[day].push(name);
-        });
+        if (days.length === 0) {
+          noDays.push(name);
+        } else {
+          days.forEach(day => {
+            if (summary[day]) summary[day].push(name);
+          });
+        }
       }
 
       let html = '';
@@ -59,6 +87,7 @@
         html += `<b>${day}:</b> ${names.join(', ') || '-'} (${names.length})<br/>`;
       }
 
+      html += `<br/><b>Working remotely (no office days):</b> ${noDays.join(', ') || '-'} (${noDays.length})`;
       document.getElementById('dashboard').innerHTML = html;
     }
 
@@ -71,6 +100,48 @@
     }
 
     renderDashboard();
+
+    // OOO logic
+    let oooData = JSON.parse(localStorage.getItem('oooData') || '{}');
+
+    function submitOOO() {
+      const name = document.getElementById('ooo-name').value.trim();
+      const date = document.getElementById('ooo-date').value;
+      const type = document.getElementById('ooo-type').value;
+
+      if (!name || !date) {
+        alert("Please enter both your name and date.");
+        return;
+      }
+
+      if (!oooData[date]) {
+        oooData[date] = [];
+      }
+
+      // Remove existing entry for same person & date (if any)
+      oooData[date] = oooData[date].filter(entry => entry.name !== name);
+
+      oooData[date].push({ name, type });
+      localStorage.setItem('oooData', JSON.stringify(oooData));
+      renderOOO();
+      alert("Your OOO day has been saved.");
+    }
+
+    function renderOOO() {
+      let html = '';
+      const sortedDates = Object.keys(oooData).sort();
+
+      for (const date of sortedDates) {
+        const entries = oooData[date];
+        html += `<b>${date}:</b> `;
+        html += entries.map(e => `${e.name} (${e.type})`).join(', ');
+        html += `<br/>`;
+      }
+
+      document.getElementById('ooo-dashboard').innerHTML = html;
+    }
+
+    renderOOO();
   </script>
 </body>
 </html>
