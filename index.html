@@ -9,7 +9,9 @@
 </head>
 <body>
   <h2>Return to Office - Weekly Poll</h2>
-  <label>Name: <input type="text" id="name" /></label><br/>
+  <label>
+    Name: <input type="text" id="name" oninput="prefillDays()" />
+  </label><br/>
 
   <p>Select the days you'll be in the office:</p>
   <div id="days">
@@ -29,8 +31,8 @@
 
     function submitChoice() {
       const name = document.getElementById('name').value.trim();
-      const dayInputs = document.querySelectorAll('input[name="day"]:checked');
-      const days = Array.from(dayInputs).map(input => input.value);
+      const checkboxes = document.querySelectorAll('input[name="day"]:checked');
+      const days = Array.from(checkboxes).map(cb => cb.value);
 
       if (!name || days.length === 0) {
         alert("Please enter your name and select at least one day.");
@@ -40,24 +42,34 @@
       rtoData[name] = days;
       localStorage.setItem('rtoData', JSON.stringify(rtoData));
       renderDashboard();
+      alert("Your selection has been saved.");
     }
 
     function renderDashboard() {
-      const days = { Monday: [], Tuesday: [], Wednesday: [], Thursday: [], Friday: [] };
-      for (const [person, selectedDays] of Object.entries(rtoData)) {
-        selectedDays.forEach(day => {
-          if (days[day]) days[day].push(person);
+      const summary = { Monday: [], Tuesday: [], Wednesday: [], Thursday: [], Friday: [] };
+
+      for (const [name, days] of Object.entries(rtoData)) {
+        days.forEach(day => {
+          if (summary[day]) summary[day].push(name);
         });
       }
 
       let html = '';
-      for (const day of Object.keys(days)) {
-        html += `<b>${day}:</b> ${days[day].join(', ') || '-'} (${days[day].length})<br/>`;
+      for (const [day, names] of Object.entries(summary)) {
+        html += `<b>${day}:</b> ${names.join(', ') || '-'} (${names.length})<br/>`;
       }
+
       document.getElementById('dashboard').innerHTML = html;
     }
 
-    // Weekly reset (optional, not functional without a server)
+    function prefillDays() {
+      const name = document.getElementById('name').value.trim();
+      const days = rtoData[name] || [];
+      document.querySelectorAll('input[name="day"]').forEach(cb => {
+        cb.checked = days.includes(cb.value);
+      });
+    }
+
     renderDashboard();
   </script>
 </body>
