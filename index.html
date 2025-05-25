@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Weekly Return to Office</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 40px; }
+    input, button { margin: 10px; }
+  </style>
+</head>
+<body>
+  <h2>Return to Office - Weekly Poll</h2>
+  <label>Name: <input type="text" id="name" /></label><br/>
+
+  <p>Select the days you'll be in the office:</p>
+  <div id="days">
+    <label><input type="checkbox" name="day" value="Monday"> Monday</label><br/>
+    <label><input type="checkbox" name="day" value="Tuesday"> Tuesday</label><br/>
+    <label><input type="checkbox" name="day" value="Wednesday"> Wednesday</label><br/>
+    <label><input type="checkbox" name="day" value="Thursday"> Thursday</label><br/>
+    <label><input type="checkbox" name="day" value="Friday"> Friday</label><br/>
+  </div>
+  <button onclick="submitChoice()">Submit</button>
+
+  <h3>📊 Dashboard</h3>
+  <div id="dashboard"></div>
+
+  <script>
+    let rtoData = JSON.parse(localStorage.getItem('rtoData') || '{}');
+
+    function submitChoice() {
+      const name = document.getElementById('name').value.trim();
+      const dayInputs = document.querySelectorAll('input[name="day"]:checked');
+      const days = Array.from(dayInputs).map(input => input.value);
+
+      if (!name || days.length === 0) {
+        alert("Please enter your name and select at least one day.");
+        return;
+      }
+
+      rtoData[name] = days;
+      localStorage.setItem('rtoData', JSON.stringify(rtoData));
+      renderDashboard();
+    }
+
+    function renderDashboard() {
+      const days = { Monday: [], Tuesday: [], Wednesday: [], Thursday: [], Friday: [] };
+      for (const [person, selectedDays] of Object.entries(rtoData)) {
+        selectedDays.forEach(day => {
+          if (days[day]) days[day].push(person);
+        });
+      }
+
+      let html = '';
+      for (const day of Object.keys(days)) {
+        html += `<b>${day}:</b> ${days[day].join(', ') || '-'} (${days[day].length})<br/>`;
+      }
+      document.getElementById('dashboard').innerHTML = html;
+    }
+
+    // Weekly reset (optional, not functional without a server)
+    renderDashboard();
+  </script>
+</body>
+</html>
