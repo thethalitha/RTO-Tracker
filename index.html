@@ -1,401 +1,159 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>RTO & WFH & OOO Dashboard with Weekly Reset & OOO Edit</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>RTO & OOO Tracker</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 40px; }
-    input, button, select, textarea { margin: 10px 0; }
-    .section { border-top: 1px solid #ccc; margin-top: 40px; padding-top: 20px; }
-    textarea { width: 300px; height: 60px; resize: vertical; }
-    .days-group { display: inline-block; margin-right: 40px; vertical-align: top; }
-    label { display: block; }
-    table { border-collapse: collapse; }
-    table, th, td { border: 1px solid black; padding: 8px; }
-    button.edit-btn, button.delete-btn {
-      margin-left: 5px; font-size: 0.8em; cursor: pointer;
-    }
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    h2 { margin-top: 40px; }
+    .section { margin-bottom: 30px; }
+    label, select, input, textarea { display: block; margin: 5px 0; }
+    .multi-checkbox label { display: inline-block; margin-right: 10px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+    th { background-color: #f2f2f2; }
   </style>
 </head>
 <body>
-  <h2>🧑‍💼 Weekly Work Plan Submission</h2>
-  <label>
-    Name: <input type="text" id="name" oninput="prefillSelections()" />
-  </label><br/>
+  <h1>RTO & OOO Tracker</h1>
 
-  <div class="days-group">
-    <p><b>Return to Office Days:</b></p>
-    <label><input type="checkbox" name="office-day" value="Monday"> Monday</label>
-    <label><input type="checkbox" name="office-day" value="Tuesday"> Tuesday</label>
-    <label><input type="checkbox" name="office-day" value="Wednesday"> Wednesday</label>
-    <label><input type="checkbox" name="office-day" value="Thursday"> Thursday</label>
-    <label><input type="checkbox" name="office-day" value="Friday"> Friday</label>
-  </div>
-
-  <div class="days-group">
-    <p><b>Work From Home Days:</b></p>
-    <label><input type="checkbox" name="wfh-day" value="Monday"> Monday</label>
-    <label><input type="checkbox" name="wfh-day" value="Tuesday"> Tuesday</label>
-    <label><input type="checkbox" name="wfh-day" value="Wednesday"> Wednesday</label>
-    <label><input type="checkbox" name="wfh-day" value="Thursday"> Thursday</label>
-    <label><input type="checkbox" name="wfh-day" value="Friday"> Friday</label>
-  </div>
-
-  <button onclick="submitWorkPlan()">Submit</button>
-
-  <h3>📊 Weekly Work Plan Dashboard</h3>
-  <div id="dashboard"></div>
-
-  <!-- OOO SECTION -->
   <div class="section">
-    <h2>🌴 Out of Office (OOO) Submission</h2>
-    <label>
-      Name: <input type="text" id="ooo-name" />
-    </label><br/>
-    <label>
-      Start Date: <input type="date" id="ooo-start-date" />
-    </label><br/>
-    <label>
-      End Date: <input type="date" id="ooo-end-date" />
-    </label><br/>
-    <label>
-      Type:
-      <select id="ooo-type" onchange="toggleRemark()">
-        <option value="Local">Local Leave</option>
-        <option value="Overseas">Overseas Leave</option>
-      </select>
-    </label><br/>
-    <div id="remark-container" style="display:none;">
-      <label>
-        Remark (for Local Leave):
-        <br/>
-        <textarea id="ooo-remark" placeholder="Short details here..."></textarea>
-      </label>
+    <h2>Submit Your RTO & WFH Plan</h2>
+    <label>Name: <input type="text" id="name" /></label>
+    <label>Week Start (Monday): <input type="date" id="week-start" /></label>
+
+    <div class="multi-checkbox">
+      <strong>Return to Office Days:</strong>
+      <label><input type="checkbox" class="rto-day" value="Mon" /> Mon</label>
+      <label><input type="checkbox" class="rto-day" value="Tue" /> Tue</label>
+      <label><input type="checkbox" class="rto-day" value="Wed" /> Wed</label>
+      <label><input type="checkbox" class="rto-day" value="Thu" /> Thu</label>
+      <label><input type="checkbox" class="rto-day" value="Fri" /> Fri</label>
     </div>
-    <button onclick="submitOOO()">Submit OOO</button>
 
-    <h3>📅 OOO Calendar</h3>
-    <div id="ooo-dashboard"></div>
+    <div class="multi-checkbox">
+      <strong>Work from Home Days:</strong>
+      <label><input type="checkbox" class="wfh-day" value="Mon" /> Mon</label>
+      <label><input type="checkbox" class="wfh-day" value="Tue" /> Tue</label>
+      <label><input type="checkbox" class="wfh-day" value="Wed" /> Wed</label>
+      <label><input type="checkbox" class="wfh-day" value="Thu" /> Thu</label>
+      <label><input type="checkbox" class="wfh-day" value="Fri" /> Fri</label>
+    </div>
+  </div>
 
-    <h3>✏️ Edit/Delete OOO Entries</h3>
-    <div id="ooo-edit-list"></div>
+  <div class="section">
+    <h2>Submit Out of Office (OOO)</h2>
+    <label>Start Date: <input type="date" id="ooo-start" /></label>
+    <label>End Date: <input type="date" id="ooo-end" /></label>
+    <label>Type:
+      <select id="ooo-type">
+        <option value="Local">Local</option>
+        <option value="Overseas">Overseas</option>
+      </select>
+    </label>
+    <label id="remark-label">Remark (Local only):
+      <textarea id="ooo-remark" rows="2"></textarea>
+    </label>
+    <button onclick="submitData()">Submit All</button>
+  </div>
+
+  <div class="section">
+    <h2>Shared Dashboard</h2>
+    <table id="dashboard">
+      <thead>
+        <tr>
+          <th>Timestamp</th>
+          <th>Name</th>
+          <th>Week Start</th>
+          <th>RTO Days</th>
+          <th>WFH Days</th>
+          <th>OOO Start</th>
+          <th>OOO End</th>
+          <th>OOO Type</th>
+          <th>Remark</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
   </div>
 
   <script>
-    // Utility to get the Date object for the most recent Friday 23:59
-    function getLastFriday2359() {
-      const now = new Date();
-      const day = now.getDay(); // Sunday=0, Monday=1,... Friday=5
-      let diff = day >= 5 ? day - 5 : 7 - (5 - day);
-      let lastFriday = new Date(now);
-      lastFriday.setDate(now.getDate() - diff);
-      lastFriday.setHours(23,59,59,999);
-      return lastFriday;
-    }
+    const API_URL = "https://script.google.com/macros/s/AKfycbyujIIHBMIMX0tfQU7d9MnWcx-jSG0hpcpfFzowIteqUOeOkx4xeC2PEDG1fAHkL_PL/exec";
 
-    // Work plan data: store office and wfh days by user
-    let workPlanData = JSON.parse(localStorage.getItem('workPlanData') || '{}');
-
-    // Check and reset workPlanData weekly after Friday 23:59
-    function checkWeeklyReset() {
-      const lastResetStr = localStorage.getItem('workPlanLastReset');
-      const lastFriday2359 = getLastFriday2359();
-      const lastReset = lastResetStr ? new Date(lastResetStr) : null;
-
-      if (!lastReset || lastReset < lastFriday2359) {
-        // Reset work plan data
-        workPlanData = {};
-        localStorage.setItem('workPlanData', JSON.stringify(workPlanData));
-        localStorage.setItem('workPlanLastReset', new Date().toISOString());
-      }
-    }
-
-    checkWeeklyReset();
-
-    function submitWorkPlan() {
-      const name = document.getElementById('name').value.trim();
-      if (!name) {
-        alert("Please enter your name.");
-        return;
-      }
-      // Get checked office days
-      const officeDays = Array.from(document.querySelectorAll('input[name="office-day"]:checked')).map(cb => cb.value);
-      // Get checked WFH days
-      const wfhDays = Array.from(document.querySelectorAll('input[name="wfh-day"]:checked')).map(cb => cb.value);
-
-      workPlanData[name] = { officeDays, wfhDays };
-      localStorage.setItem('workPlanData', JSON.stringify(workPlanData));
-      renderDashboard();
-      alert("Your work plan has been saved.");
-    }
-
-    function renderDashboard() {
-      const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
-
-      // Prepare summary objects: day => [names]
-      let officeSummary = {};
-      let wfhSummary = {};
-      daysOfWeek.forEach(day => {
-        officeSummary[day] = [];
-        wfhSummary[day] = [];
-      });
-
-      for (const [name, plans] of Object.entries(workPlanData)) {
-        plans.officeDays.forEach(day => {
-          if (officeSummary[day]) officeSummary[day].push(name);
-        });
-        plans.wfhDays.forEach(day => {
-          if (wfhSummary[day]) wfhSummary[day].push(name);
-        });
-      }
-
-      let html = '<table><thead><tr><th>Day</th><th>In Office</th><th>Work From Home</th></tr></thead><tbody>';
-
-      daysOfWeek.forEach(day => {
-        html += `<tr>
-          <td><b>${day}</b></td>
-          <td>${officeSummary[day].join(', ') || '-'}</td>
-          <td>${wfhSummary[day].join(', ') || '-'}</td>
-        </tr>`;
-      });
-
-      html += '</tbody></table>';
-      document.getElementById('dashboard').innerHTML = html;
-    }
-
-    function prefillSelections() {
-      const name = document.getElementById('name').value.trim();
-      const plan = workPlanData[name] || { officeDays: [], wfhDays: [] };
-
-      // Prefill office days
-      document.querySelectorAll('input[name="office-day"]').forEach(cb => {
-        cb.checked = plan.officeDays.includes(cb.value);
-      });
-
-      // Prefill WFH days
-      document.querySelectorAll('input[name="wfh-day"]').forEach(cb => {
-        cb.checked = plan.wfhDays.includes(cb.value);
-      });
-    }
-
-    renderDashboard();
-
-    // OOO logic
-    let oooData = JSON.parse(localStorage.getItem('oooData') || '{}');
-
-    // Clean up OOO data removing dates before today
-    function cleanOldOOOEntries() {
-      const todayStr = new Date().toISOString().slice(0,10);
-      for (const date in oooData) {
-        if (date < todayStr) {
-          delete oooData[date];
-        }
-      }
-      localStorage.setItem('oooData', JSON.stringify(oooData));
-    }
-
-    cleanOldOOOEntries();
-
-    function toggleRemark() {
+    document.getElementById('ooo-type').addEventListener('change', () => {
       const type = document.getElementById('ooo-type').value;
-      document.getElementById('remark-container').style.display = (type === 'Local') ? 'block' : 'none';
+      document.getElementById('remark-label').style.display = (type === 'Local') ? 'block' : 'none';
+    });
+
+    function getCheckedValues(className) {
+      return Array.from(document.querySelectorAll('.' + className + ':checked')).map(cb => cb.value);
     }
 
-    toggleRemark(); // initialize on load
+    function submitData() {
+      const name = document.getElementById('name').value;
+      const weekStart = document.getElementById('week-start').value;
+      const rtoDays = getCheckedValues('rto-day');
+      const wfhDays = getCheckedValues('wfh-day');
+      const oooStart = document.getElementById('ooo-start').value;
+      const oooEnd = document.getElementById('ooo-end').value;
+      const oooType = document.getElementById('ooo-type').value;
+      const remark = document.getElementById('ooo-remark').value;
 
-    // Current editing record info for OOO (null if no edit)
-    let currentEdit = null;
-
-    function submitOOO() {
-      const name = document.getElementById('ooo-name').value.trim();
-      const startDate = document.getElementById('ooo-start-date').value;
-      const endDate = document.getElementById('ooo-end-date').value;
-      const type = document.getElementById('ooo-type').value;
-      const remark = document.getElementById('ooo-remark').value.trim();
-
-      if (!name || !startDate || !endDate) {
-        alert("Please enter name, start date, and end date.");
+      if (!name || !weekStart) {
+        alert("Name and week start date are required.");
         return;
       }
 
-      if (endDate < startDate) {
-        alert("End date cannot be before start date.");
-        return;
-      }
+      const payload = {
+        name,
+        weekStart,
+        rtoDays,
+        wfhDays,
+        oooStart,
+        oooEnd,
+        oooType,
+        remark
+      };
 
-      // If editing, first remove old entries for this person & old date range
-      if (currentEdit) {
-        removeOOOEntries(currentEdit.name, currentEdit.startDate, currentEdit.endDate);
-      }
-
-      // Store leave for each date in the range
-      const start = new Date(startDate);
-      const end = new Date(endDate);
-
-      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-        const dateStr = d.toISOString().slice(0,10); // YYYY-MM-DD
-
-        if (!oooData[dateStr]) {
-          oooData[dateStr] = [];
-        }
-
-        // Remove existing entry for same person on this date (avoid duplicates)
-        oooData[dateStr] = oooData[dateStr].filter(entry => entry.name !== name);
-
-        oooData[dateStr].push({ name, type, remark: type === 'Local' ? remark : '' });
-      }
-
-      localStorage.setItem('oooData', JSON.stringify(oooData));
-      renderOOO();
-      clearOOOForm();
-      alert(currentEdit ? "Your OOO leave has been updated." : "Your OOO leave has been saved.");
-      currentEdit = null;
+      fetch(API_URL, {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      })
+      .then(res => res.text())
+      .then(() => {
+        alert("Submitted successfully.");
+        loadDashboard();
+      })
+      .catch(err => alert("Error submitting: " + err));
     }
 
-    function removeOOOEntries(name, startDate, endDate) {
-      const start = new Date(startDate);
-      const end = new Date(endDate);
-      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-        const dateStr = d.toISOString().slice(0,10);
-        if (oooData[dateStr]) {
-          oooData[dateStr] = oooData[dateStr].filter(entry => entry.name !== name);
-          if (oooData[dateStr].length === 0) {
-            delete oooData[dateStr];
-          }
-        }
-      }
-      localStorage.setItem('oooData', JSON.stringify(oooData));
+    function loadDashboard() {
+      fetch(API_URL)
+        .then(res => res.json())
+        .then(data => {
+          const tbody = document.querySelector("#dashboard tbody");
+          tbody.innerHTML = '';
+          data.forEach(row => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+              <td>${row.Timestamp}</td>
+              <td>${row.Name}</td>
+              <td>${row["Week Start"]}</td>
+              <td>${row["RTO Days"]}</td>
+              <td>${row["WFH Days"]}</td>
+              <td>${row["OOO Start"]}</td>
+              <td>${row["OOO End"]}</td>
+              <td>${row["OOO Type"]}</td>
+              <td>${row["Remark"]}</td>
+            `;
+            tbody.appendChild(tr);
+          });
+        })
+        .catch(err => console.error("Error loading dashboard:", err));
     }
 
-    function renderOOO() {
-      let html = '';
-      const sortedDates = Object.keys(oooData).sort();
-
-      for (const date of sortedDates) {
-        const entries = oooData[date];
-        html += `<b>${date}:</b> `;
-        html += entries.map(e => {
-          const rmk = e.type === 'Local' && e.remark ? ` - ${e.remark}` : '';
-          return `${e.name} (${e.type}${rmk})`;
-        }).join(', ');
-        html += `<br/>`;
-      }
-
-      document.getElementById('ooo-dashboard').innerHTML = html;
-      renderOOOEditList();
-    }
-
-    function renderOOOEditList() {
-      // We want to show unique person + date ranges in future/current only
-      const todayStr = new Date().toISOString().slice(0,10);
-
-      // Build a map of entries by person & aggregate continuous date ranges
-      let personDates = {};
-
-      // Sort dates ascending
-      const sortedDates = Object.keys(oooData).sort();
-
-      for (const date of sortedDates) {
-        if (date < todayStr) continue; // skip past
-        for (const entry of oooData[date]) {
-          const key = entry.name + '|' + entry.type + '|' + (entry.remark || '');
-          if (!personDates[key]) personDates[key] = [];
-          personDates[key].push(date);
-        }
-      }
-
-      // Convert each person's dates into continuous ranges
-      let ranges = [];
-      for (const key in personDates) {
-        const dates = personDates[key].sort();
-        // Split continuous dates into ranges
-        let start = dates[0];
-        let end = dates[0];
-        for (let i = 1; i < dates.length; i++) {
-          let prevDate = new Date(dates[i-1]);
-          let currDate = new Date(dates[i]);
-          prevDate.setDate(prevDate.getDate() + 1);
-          if (currDate.getTime() === prevDate.getTime()) {
-            // continuous
-            end = dates[i];
-          } else {
-            // gap, save previous range
-            const [name, type, remark] = key.split('|');
-            ranges.push({ name, type, remark, start, end });
-            start = dates[i];
-            end = dates[i];
-          }
-        }
-        // push last range
-        const [name, type, remark] = key.split('|');
-        ranges.push({ name, type, remark, start, end });
-      }
-
-      if (ranges.length === 0) {
-        document.getElementById('ooo-edit-list').innerHTML = '<i>No upcoming OOO entries.</i>';
-        return;
-      }
-
-      // Build HTML with edit/delete buttons
-      let html = '<table><thead><tr><th>Name</th><th>Type</th><th>Remark</th><th>Start Date</th><th>End Date</th><th>Actions</th></tr></thead><tbody>';
-      ranges.forEach((r, i) => {
-        html += `<tr>
-          <td>${r.name}</td>
-          <td>${r.type}</td>
-          <td>${r.remark || '-'}</td>
-          <td>${r.start}</td>
-          <td>${r.end}</td>
-          <td>
-            <button class="edit-btn" onclick="editOOOEntry(${i})">Edit</button>
-            <button class="delete-btn" onclick="deleteOOOEntry(${i})">Delete</button>
-          </td>
-        </tr>`;
-      });
-      html += '</tbody></table>';
-      document.getElementById('ooo-edit-list').innerHTML = html;
-
-      // Save ranges globally to access for edit/delete
-      window.oooRanges = ranges;
-    }
-
-    function editOOOEntry(index) {
-      const entry = window.oooRanges[index];
-      if (!entry) return;
-
-      currentEdit = entry;
-
-      // Fill form
-      document.getElementById('ooo-name').value = entry.name;
-      document.getElementById('ooo-start-date').value = entry.start;
-      document.getElementById('ooo-end-date').value = entry.end;
-      document.getElementById('ooo-type').value = entry.type;
-      toggleRemark();
-      document.getElementById('ooo-remark').value = entry.remark || '';
-
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-
-    function deleteOOOEntry(index) {
-      const entry = window.oooRanges[index];
-      if (!entry) return;
-
-      if (!confirm(`Delete OOO entry for ${entry.name} from ${entry.start} to ${entry.end}?`)) return;
-
-      removeOOOEntries(entry.name, entry.start, entry.end);
-      renderOOO();
-    }
-
-    function clearOOOForm() {
-      document.getElementById('ooo-name').value = '';
-      document.getElementById('ooo-start-date').value = '';
-      document.getElementById('ooo-end-date').value = '';
-      document.getElementById('ooo-type').value = 'Local';
-      toggleRemark();
-      document.getElementById('ooo-remark').value = '';
-      currentEdit = null;
-    }
-
-    renderOOO();
-
+    loadDashboard(); // Load on page load
   </script>
 </body>
 </html>
